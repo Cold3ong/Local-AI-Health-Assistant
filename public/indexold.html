@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>LM Studio Time Bot</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 20px auto; }
+    #chat { border: 1px solid #ccc; padding: 10px; height: 400px; overflow-y: auto; }
+    .msg { margin-bottom: 8px; }
+    .user { color: #0066cc; }
+    .bot { color: #333; }
+    .meta { font-size: 12px; color: #888; }
+  </style>
+</head>
+<body>
+  <h1>LM Studio + Function Calling Demo</h1>
+  <p>試吓問：「而家幾點？」 / "what time is it now?" 👇</p>
+
+  <div id="chat"></div>
+
+  <form id="form">
+    <input id="input" type="text"
+           placeholder="輸入你想問嘅問題..."
+           style="width: 80%;" />
+    <button type="submit">Send</button>
+  </form>
+
+  <script>
+    const chatDiv = document.getElementById("chat");
+    const form = document.getElementById("form");
+    const input = document.getElementById("input");
+
+    function addMessage(role, text) {
+      const div = document.createElement("div");
+      div.className = "msg " + role;
+      div.textContent = (role === "user" ? "你: " : "AI: ") + text;
+      chatDiv.appendChild(div);
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+
+    function addMeta(text) {
+      const div = document.createElement("div");
+      div.className = "msg meta";
+      div.textContent = text;
+      chatDiv.appendChild(div);
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+
+      addMessage("user", text);
+      input.value = "";
+      addMeta("AI 思考緊…");
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text }),
+      });
+
+      const data = await res.json();
+      const lastMeta = document.querySelector("#chat .meta:last-child");
+      if (lastMeta) lastMeta.remove();
+
+      if (data.usedTool) {
+        addMeta("（剛才 AI 有 call 咗 getCurrentTime 工具）");
+      }
+
+      addMessage("bot", data.reply || "[無回覆]");
+    });
+  </script>
+</body>
+</html>
